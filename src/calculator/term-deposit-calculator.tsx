@@ -3,8 +3,9 @@ import { FormProvider, useForm } from "react-hook-form";
 import { FormInput } from "../components/form-input";
 import { FormSelect } from "../components/form-select";
 import {
-  calculateTermDeposit,
+  calculateProjectedSavings,
   InterestPaidFrequency,
+  TermDepositOutput,
 } from "./calculate-term-deposit";
 import "./term-deposit-calculator.css";
 
@@ -24,7 +25,7 @@ const INTEREST_PAID_OPTIONS: InterestPaidOption[] = [
 ];
 
 export function TermDepositCalculator() {
-  const [result, setResult] = useState<string | null>(null);
+  const [results, setResults] = useState<TermDepositOutput[]>([]);
   const methods = useForm<TermDepositFormData>({
     mode: "onChange",
     defaultValues: {
@@ -40,23 +41,14 @@ export function TermDepositCalculator() {
   } = methods;
 
   const calculate = useCallback((values: TermDepositFormData) => {
-    const value = calculateTermDeposit({
+    const value = calculateProjectedSavings({
       amountDollars: values.amount,
       interestRateDecimal: values.interestRatePercent / 100,
-      investmentTermYears: values.investmentTermMonths / 12,
+      investmentTermMonths: values.investmentTermMonths,
       interestPaidFrequency: values.interestPaidFrequency,
     });
-    if (isNaN(value)) {
-      setResult(null);
-      return;
-    }
-    setResult(
-      Math.round(value).toLocaleString("en-AU", {
-        style: "currency",
-        currency: "AUD",
-        minimumFractionDigits: 0,
-      })
-    );
+
+    setResults(value);
   }, []);
 
   const onSubmit = handleSubmit(calculate);
@@ -148,7 +140,25 @@ export function TermDepositCalculator() {
       </FormProvider>
       <div className="result">
         <span className="result-label">Final balance</span>
-        <span className="result-amount">{result ?? "-"}</span>
+        <span className="result-amount">
+          <table>
+            <tr>
+              <th>Month</th>
+              <th>Interest Rate</th>
+              <th>Interest Earned</th>
+              <th>Balance</th>
+            </tr>
+
+            {results.map((result) => (
+              <tr>
+                <td>{result.month}</td>
+                <td>{result.interestRate}</td>
+                <td>{result.interestEarned}</td>
+                <td>{result.balance}</td>
+              </tr>
+            ))}
+          </table>
+        </span>
       </div>
     </div>
   );
