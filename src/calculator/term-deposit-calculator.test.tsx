@@ -4,12 +4,19 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { calculateTermDeposit } from "./calculate-term-deposit";
 import { TermDepositCalculator } from "./term-deposit-calculator";
+import { calculateProjectedSavings } from "./calculate-projected-savings";
 
 vi.mock("./calculate-term-deposit");
+vi.mock("./calculate-projected-savings");
 
 describe("TermDepositCalculator", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(calculateTermDeposit).mockReturnValue({
+      finalBalance: 0,
+      interestEarned: 0,
+    });
+    vi.mocked(calculateProjectedSavings).mockReturnValue([]);
   });
 
   test("shows form fields with default values", async () => {
@@ -18,7 +25,7 @@ describe("TermDepositCalculator", () => {
     await waitFor(() => {
       expect(screen.getByLabelText("Deposit amount ($)")).toHaveValue(10000);
       expect(screen.getByLabelText(/Interest rate \(% p.a.\)/)).toHaveValue(
-        1.1
+        1.1,
       );
       expect(screen.getByLabelText("Investment term (months)")).toHaveValue(36);
       expect(screen.getByLabelText("Interest paid")).toHaveValue("at-maturity");
@@ -37,18 +44,18 @@ describe("TermDepositCalculator", () => {
         await userEvent.tab();
 
         await waitFor(() => {
-          expect(calculateTermDeposit).toHaveBeenCalledWith({
+          expect(calculateProjectedSavings).toHaveBeenCalledWith({
             amountDollars: input,
             interestRateDecimal: expect.any(Number),
-            investmentTermYears: expect.any(Number),
+            investmentTermMonths: expect.any(Number),
             interestPaidFrequency: expect.any(String),
           });
 
           expect(
-            screen.queryByText(/Please enter a deposit amount/)
+            screen.queryByText(/Please enter a deposit amount/),
           ).toBeFalsy();
         });
-      }
+      },
     );
 
     test("shows error message when amount is empty", async () => {
@@ -58,7 +65,7 @@ describe("TermDepositCalculator", () => {
       await userEvent.tab();
 
       expect(
-        await screen.findByText(/Please enter a deposit amount/)
+        await screen.findByText(/Please enter a deposit amount/),
       ).toBeInTheDocument();
     });
 
@@ -69,7 +76,7 @@ describe("TermDepositCalculator", () => {
       await userEvent.type(amountInput, "999");
       await userEvent.tab();
       expect(
-        await screen.findByText("Deposit amount must be $1,000 or more")
+        await screen.findByText("Deposit amount must be $1,000 or more"),
       ).toBeInTheDocument();
     });
 
@@ -82,7 +89,7 @@ describe("TermDepositCalculator", () => {
       await userEvent.tab();
 
       expect(
-        await screen.findByText("Deposit amount cannot exceed $1,500,000")
+        await screen.findByText("Deposit amount cannot exceed $1,500,000"),
       ).toBeInTheDocument();
     });
   });
@@ -102,18 +109,18 @@ describe("TermDepositCalculator", () => {
         await userEvent.tab();
 
         await waitFor(() => {
-          expect(calculateTermDeposit).toHaveBeenCalledWith({
+          expect(calculateProjectedSavings).toHaveBeenCalledWith({
             amountDollars: expect.any(Number),
             interestRateDecimal: expected,
-            investmentTermYears: expect.any(Number),
+            investmentTermMonths: expect.any(Number),
             interestPaidFrequency: expect.any(String),
           });
 
           expect(
-            screen.queryByText(/Please enter an interest rate/)
+            screen.queryByText(/Please enter an interest rate/),
           ).toBeFalsy();
         });
-      }
+      },
     );
 
     test("shows error message when interest rate is empty", async () => {
@@ -121,7 +128,7 @@ describe("TermDepositCalculator", () => {
 
       await userEvent.clear(screen.getByLabelText(/Interest rate \(% p.a.\)/));
       expect(
-        await screen.findByText("Please enter an interest rate. e.g. 2.5%")
+        await screen.findByText("Please enter an interest rate. e.g. 2.5%"),
       ).toBeInTheDocument();
     });
 
@@ -132,7 +139,7 @@ describe("TermDepositCalculator", () => {
       await userEvent.type(interestRate, "0");
       await userEvent.tab();
       expect(
-        await screen.findByText("Interest rate must be more than 0%")
+        await screen.findByText("Interest rate must be more than 0%"),
       ).toBeInTheDocument();
     });
 
@@ -143,20 +150,15 @@ describe("TermDepositCalculator", () => {
       await userEvent.type(interestRate, "15.1");
       await userEvent.tab();
       expect(
-        await screen.findByText("Interest rate cannot exceed 15%")
+        await screen.findByText("Interest rate cannot exceed 15%"),
       ).toBeInTheDocument();
     });
   });
 
   describe("investment term field", () => {
-    test.each([
-      [3, 0.25],
-      [12, 1],
-      [18, 1.5],
-      [60, 5],
-    ])(
-      "converts months to years and updates calculation when valid value is entered (%j -> %j)",
-      async (input, expected) => {
+    test.each([3, 12, 18, 60])(
+      "updates calculation when valid value is entered (%j)",
+      async (input) => {
         render(<TermDepositCalculator />);
         const termInput = screen.getByLabelText("Investment term (months)");
         await userEvent.clear(termInput);
@@ -164,20 +166,20 @@ describe("TermDepositCalculator", () => {
         await userEvent.tab();
 
         await waitFor(() => {
-          expect(calculateTermDeposit).toHaveBeenCalledWith({
+          expect(calculateProjectedSavings).toHaveBeenCalledWith({
             amountDollars: expect.any(Number),
             interestRateDecimal: expect.any(Number),
-            investmentTermYears: expected,
+            investmentTermMonths: input,
             interestPaidFrequency: expect.any(String),
           });
 
           expect(
             screen.queryByText(
-              "Please enter an investment term. e.g. 12 months"
-            )
+              "Please enter an investment term. e.g. 12 months",
+            ),
           ).toBeFalsy();
         });
-      }
+      },
     );
 
     test("shows error message investment term is empty", async () => {
@@ -186,8 +188,8 @@ describe("TermDepositCalculator", () => {
       userEvent.clear(screen.getByLabelText("Investment term (months)"));
       expect(
         await screen.findByText(
-          "Please enter an investment term. e.g. 12 months"
-        )
+          "Please enter an investment term. e.g. 12 months",
+        ),
       ).toBeInTheDocument();
     });
 
@@ -198,7 +200,7 @@ describe("TermDepositCalculator", () => {
       await userEvent.type(termInput, "2");
       await userEvent.tab();
       expect(
-        await screen.findByText("Investment term must be more than 3 months")
+        await screen.findByText("Investment term must be more than 3 months"),
       ).toBeInTheDocument();
     });
 
@@ -209,7 +211,7 @@ describe("TermDepositCalculator", () => {
       await userEvent.type(termInput, "61");
       await userEvent.tab();
       expect(
-        await screen.findByText("Investment term cannot exceed than 60 months")
+        await screen.findByText("Investment term cannot exceed than 60 months"),
       ).toBeInTheDocument();
     });
   });
@@ -223,20 +225,20 @@ describe("TermDepositCalculator", () => {
         await userEvent.selectOptions(interestPaidSelect, [input]);
 
         await waitFor(() => {
-          expect(calculateTermDeposit).toHaveBeenCalledWith({
+          expect(calculateProjectedSavings).toHaveBeenCalledWith({
             amountDollars: expect.any(Number),
             interestRateDecimal: expect.any(Number),
-            investmentTermYears: expect.any(Number),
+            investmentTermMonths: expect.any(Number),
             interestPaidFrequency: input,
           });
 
           expect(
             screen.queryByText(
-              "Please enter an investment term. e.g. 12 months"
-            )
+              "Please enter an investment term. e.g. 12 months",
+            ),
           ).toBeFalsy();
         });
-      }
+      },
     );
   });
 
@@ -248,7 +250,11 @@ describe("TermDepositCalculator", () => {
     ])(
       "rounds and shows final balance when all fields are valid (%j -> %j)",
       async (input, expected) => {
-        vi.mocked(calculateTermDeposit).mockReturnValue(input);
+        vi.mocked(calculateTermDeposit).mockReturnValue({
+          finalBalance: input,
+          interestEarned: 0,
+        });
+        vi.mocked(calculateProjectedSavings).mockReturnValue([]);
 
         render(<TermDepositCalculator />);
 
@@ -260,14 +266,15 @@ describe("TermDepositCalculator", () => {
           expect(screen.getByText("Final balance")).toBeInTheDocument();
           expect(screen.getByText(expected)).toBeInTheDocument();
         });
-      }
+      },
     );
 
     test("does not show balance if calculation fails", async () => {
       vi.mocked(calculateTermDeposit).mockImplementation(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        () => new Error("failed to calculate") as any
+        () => new Error("failed to calculate") as any,
       );
+      vi.mocked(calculateProjectedSavings).mockReturnValue([]);
 
       render(<TermDepositCalculator />);
 
@@ -282,7 +289,11 @@ describe("TermDepositCalculator", () => {
     });
 
     test("does not show balance if calculation returns a non number", async () => {
-      vi.mocked(calculateTermDeposit).mockReturnValue(NaN);
+      vi.mocked(calculateTermDeposit).mockReturnValue({
+        finalBalance: NaN,
+        interestEarned: 0,
+      });
+      vi.mocked(calculateProjectedSavings).mockReturnValue([]);
 
       render(<TermDepositCalculator />);
 
@@ -297,7 +308,11 @@ describe("TermDepositCalculator", () => {
     });
 
     test("does not show balance if form is invalid", async () => {
-      vi.mocked(calculateTermDeposit).mockReturnValue(NaN);
+      vi.mocked(calculateTermDeposit).mockReturnValue({
+        finalBalance: NaN,
+        interestEarned: 0,
+      });
+      vi.mocked(calculateProjectedSavings).mockReturnValue([]);
 
       render(<TermDepositCalculator />);
 

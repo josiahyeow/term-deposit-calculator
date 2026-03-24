@@ -17,7 +17,7 @@ describe("interest paid at maturity", () => {
     const result = calculateTermDeposit({
       amountDollars: 1000,
       interestRateDecimal: 0.05,
-      investmentTermYears: 2,
+      investmentTermMonths: 24,
       interestPaidFrequency: "at-maturity",
     });
     expect(calculateInterest).toHaveBeenCalledWith({
@@ -25,7 +25,7 @@ describe("interest paid at maturity", () => {
       rate: 0.05,
       time: 2,
     });
-    expect(result).toBe(1100);
+    expect(result.finalBalance).toBe(1100);
   });
 
   test("calculates term deposit using interest formula", () => {
@@ -34,7 +34,7 @@ describe("interest paid at maturity", () => {
     const result = calculateTermDeposit({
       amountDollars: 1000,
       interestRateDecimal: 0.05,
-      investmentTermYears: 2,
+      investmentTermMonths: 24,
       interestPaidFrequency: "at-maturity",
     });
     expect(calculateInterest).toHaveBeenCalledWith({
@@ -42,7 +42,7 @@ describe("interest paid at maturity", () => {
       rate: 0.05,
       time: 2,
     });
-    expect(result).toBe(1101);
+    expect(result.finalBalance).toBe(1101);
   });
 });
 
@@ -53,7 +53,7 @@ describe("interest paid monthly", () => {
     const result = calculateTermDeposit({
       amountDollars: 1000,
       interestRateDecimal: 0.05,
-      investmentTermYears: 2,
+      investmentTermMonths: 24,
       interestPaidFrequency: "monthly",
     });
     expect(calculateCompoundInterest).toHaveBeenCalledWith({
@@ -62,7 +62,7 @@ describe("interest paid monthly", () => {
       time: 2,
       compoundsPerYear: 12,
     });
-    expect(result).toBe(3000);
+    expect(result.finalBalance).toBe(3000);
   });
 });
 
@@ -73,7 +73,7 @@ describe("interest paid quarterly", () => {
     const result = calculateTermDeposit({
       amountDollars: 1000,
       interestRateDecimal: 0.05,
-      investmentTermYears: 2,
+      investmentTermMonths: 24,
       interestPaidFrequency: "quarterly",
     });
     expect(calculateCompoundInterest).toHaveBeenCalledWith({
@@ -82,7 +82,7 @@ describe("interest paid quarterly", () => {
       time: 2,
       compoundsPerYear: 4,
     });
-    expect(result).toBe(100000.8);
+    expect(result.finalBalance).toBe(100000.8);
   });
 });
 
@@ -93,7 +93,7 @@ describe("interest paid annually", () => {
     const result = calculateTermDeposit({
       amountDollars: 1000,
       interestRateDecimal: 0.05,
-      investmentTermYears: 2,
+      investmentTermMonths: 24,
       interestPaidFrequency: "annually",
     });
     expect(calculateCompoundInterest).toHaveBeenCalledWith({
@@ -102,6 +102,6 @@ describe("interest paid annually", () => {
       time: 2,
       compoundsPerYear: 1,
     });
-    expect(result).toBe(5000.01);
+    expect(result.finalBalance).toBe(5000.01);
   });
 });

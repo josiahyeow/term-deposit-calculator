@@ -3,11 +3,14 @@ import { FormProvider, useForm } from "react-hook-form";
 import { FormInput } from "../components/form-input";
 import { FormSelect } from "../components/form-select";
 import {
-  calculateProjectedSavings,
+  calculateTermDeposit,
   InterestPaidFrequency,
-  TermDepositOutput,
 } from "./calculate-term-deposit";
 import "./term-deposit-calculator.css";
+import {
+  calculateProjectedSavings,
+  ProjectedSavings,
+} from "./calculate-projected-savings";
 
 type InterestPaidOption = { name: string; value: InterestPaidFrequency };
 type TermDepositFormData = {
@@ -25,7 +28,10 @@ const INTEREST_PAID_OPTIONS: InterestPaidOption[] = [
 ];
 
 export function TermDepositCalculator() {
-  const [results, setResults] = useState<TermDepositOutput[]>([]);
+  const [finalBalance, setFinalBalance] = useState<number | null>(null);
+  const [projectedSavings, setProjectedSavings] = useState<ProjectedSavings>(
+    [],
+  );
   const methods = useForm<TermDepositFormData>({
     mode: "onChange",
     defaultValues: {
@@ -41,14 +47,22 @@ export function TermDepositCalculator() {
   } = methods;
 
   const calculate = useCallback((values: TermDepositFormData) => {
-    const value = calculateProjectedSavings({
+    const { finalBalance } = calculateTermDeposit({
       amountDollars: values.amount,
       interestRateDecimal: values.interestRatePercent / 100,
       investmentTermMonths: values.investmentTermMonths,
       interestPaidFrequency: values.interestPaidFrequency,
     });
 
-    setResults(value);
+    const projectedSavings = calculateProjectedSavings({
+      amountDollars: values.amount,
+      interestRateDecimal: values.interestRatePercent / 100,
+      investmentTermMonths: values.investmentTermMonths,
+      interestPaidFrequency: values.interestPaidFrequency,
+    });
+
+    setFinalBalance(finalBalance);
+    setProjectedSavings(projectedSavings);
   }, []);
 
   const onSubmit = handleSubmit(calculate);
@@ -141,24 +155,26 @@ export function TermDepositCalculator() {
       <div className="result">
         <span className="result-label">Final balance</span>
         <span className="result-amount">
-          <table>
-            <tr>
-              <th>Month</th>
-              <th>Interest Rate</th>
-              <th>Interest Earned</th>
-              <th>Balance</th>
-            </tr>
-
-            {results.map((result) => (
-              <tr>
-                <td>{result.month}</td>
-                <td>{result.interestRate}</td>
-                <td>{result.interestEarned}</td>
-                <td>{result.balance}</td>
-              </tr>
-            ))}
-          </table>
+          {finalBalance && !Number.isNaN(finalBalance)
+            ? `$${Math.round(finalBalance).toLocaleString()}`
+            : "-"}
         </span>
+        <table>
+          <tr>
+            <th>Month</th>
+            <th>Interest Rate</th>
+            <th>Interest Earned</th>
+            <th>Balance</th>
+          </tr>
+          {projectedSavings.map((result) => (
+            <tr key={result.month}>
+              <td>{result.month}</td>
+              <td>{result.interestRate}</td>
+              <td>{result.interestEarned}</td>
+              <td>{result.balance}</td>
+            </tr>
+          ))}
+        </table>
       </div>
     </div>
   );
